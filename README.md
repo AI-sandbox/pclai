@@ -5,7 +5,21 @@
 
 ## Point Cloud Local Ancestry Inference (PCLAI)
 
-Point cloud local ancestry inference (PCLAI) is a deep learning-based approach for inferring continuous population genetic structure along the genome. Instead of assigning each genomic window to a discrete ancestry label, PCLAI predicts a **continuous coordinate** (e.g., a point in PC1–PC2 space) for every window, together with a **per-window confidence score**.
+Point cloud local ancestry inference (PCLAI) is a deep learning-based approach for inferring continuous population genetic structure along the genome. Instead of assigning each genomic window to a discrete ancestry label, PCLAI predicts a **continuous coordinate** (e.g., a point in PC1–PC2 space) for every window, together with a **per-window confidence score**. For more technical details, we recommend reading [our corresponding preprint](https://github.com/AI-sandbox/pclai).
+
+## Usage
+
+### Training PCLAI on custom datasets
+Soon!
+
+### Inferring PCLAI coordinates
+Soon!
+
+### Demo
+Soon!
+
+### License
+**NOTICE**: his software is available for use free of charge for academic research use only. Academic users may fork this repository and modify and improve to suit their research needs, but also inherit these terms and must include a licensing notice to that effect. Commercial users, for profit companies or consultants, and non-profit institutions not qualifying as "academic research" should contact `geleta@berkeley.edu`. This applies to this repository directly and any other repository that includes source, executables, or git commands that pull/clone this repository as part of its function. Such repositories, whether ours or others, must include this notice.
 
 
 ## Cite
