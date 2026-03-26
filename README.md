@@ -29,7 +29,7 @@ When using the [PCLAI method](https://github.com/AI-sandbox/pclai) or [PCLAI out
 ```{tex}
 @article{geleta_pclai_2026,
     author = {Geleta, Margarita and Mas Montserrat, Daniel and Ioannidis, Nilah M. and Ioannidis, Alexander G.},
-    title = {{Point cloud local ancestry inference (PCLAI): coordinate-based ancestry along the genome}},
+    title = {{Point cloud local ancestry inference (PCLAI): continuous coordinate-based ancestry along the genome}},
     year = {2026},
     journal = {biorxiv},
     doi={10.64898/2026.03.23.713813}
