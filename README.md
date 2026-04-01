@@ -57,51 +57,92 @@ pclai_bundle/
     pclainet_chm1_s02.pt2
     ...
 ```
+#### `snp_manifests/`
 
-The `snp_manifests/` directory contains the exact ordered SNP list expected by each model artifact. Each `.snps.tsv` file has this format:
-```
+The `snp_manifests/` directory contains the **exact ordered SNP list** expected by each exported model artifact. 
+
+Each `.snps.tsv` file has this format:
+```text
 chrom   pos     rsid    ref     alt
 chr21   5034221 .       G       A
 chr21   5034230 .       C       T
 chr21   5034244 .       C       T
 ```
-The `models/` directory contains exported PyTorch artifacts (`.pt2`).
+These manifest files are the source of truth for:
 
-##### Input requirements
++ Expected SNP identity
++ Expected SNP order
+
+#### `models/`
+
+The `models/` directory contains exported PyTorch model artifacts (`.pt2`) that can be loaded for inference.
+
+#### `manifest.json`
+
+The `manifest.json` file contains the overall bundle metadata, including:
++ Chromosome / subset mapping
++ Model artifact paths
++ SNP manifest paths
++ Expected SNP counts
++ Bundle-level configuration metadata
+
+### Input requirements
 
 Your input VCF must be harmonized to the model space before running inference. In practice, that means:
 
-- GRCh38 coordinates
-- Phased haplotypes
-- Imputed against the reference panel (1000 Genomes and/or HGDP)
-- Harmonized to the SNP order expected by the bundle
+- [ ] **GRCh38** coordinates
+- [ ] **Phased** haplotypes
+- [ ] **Imputed** against the reference panel (1000 Genomes and/or HGDP)
+- [ ] **Harmonized to the SNP order expected by the bundle**
 
-##### Harmonized output format
+If your VCF is already:
 
-After harmonization, you should have a folder like:
-
-```
-my_vcfs/
-  chr1/final.for_model.chr1.vcf.gz
-  chr2/final.for_model.chr2.vcf.gz
-  ...
-```
-These per-chromosome VCFs are in the exact SNP order expected by the bundle and can be passed directly to the inference runner.
-
-##### Harmonization workflow
-
-If your input VCF is already:
-
-- GRCh38
-- Phased
-- Imputed
-- And already matches the SNP order expected by the bundle
+- [x] In GRCh38
+- [x] Phased
+- [x] Imputed
+- [x] And already matches the SNP order expected by the bundle
 
 Then you can skip harmonization and run inference directly.
 
-Otherwise, run `pipeline.py` first. Make sure you have BCFtools and BEAGLE5 installed (BEAGLE path should be specified in `--beagle-jar`). Make sure your VCF is in GRCh38 and the contigs include the `chr` prefix (e.g., `chr1` instead of `1`): `##contig=<ID=chr1>`.
+Otherwise, run `pipeline.py` first.
 
-```
+#### Harmonization workflow
+
+The harmonization pipeline does the following for each chromosome:
+
+1. Extracts chromosome-specific variants from the input VCF
+2. Aligns contig naming with the reference panel
+3. Checks allele concordance against the bundle SNP manifest
+4. Optionally normalizes the target VCF against a reference FASTA
+5. Phases / imputes the target VCF (with BEAGLE5)
+6. emits a final per-chromosome VCF in the exact SNP-manifest order expected by the bundle
+
+##### External tools required
+
+You will need:
+
+- [x] BCFtools
+- [x] java
+- [x] BEAGLE5 (JAR file path)
+- [x] A GRCh38 reference FASTA if using normalization (optional)
+- [x] Reference panel VCFs for imputation (1000 Genomes and/or HGDP)
+
+> [!IMPORTANT]
+The reference panel VCFs used for imputation are not the same thing as the bundle SNP manifests. The bundle defines the final SNP order expected by the model The reference panel VCFs are used by BEAGLE for phasing/imputation
+
+##### Expected input genome build
+All pretrained bundles assume GRCh38 coordinates.
+>[!IMPORTANT]
+If your input VCF is not in GRCh38, harmonization will not be sufficient by itself.
+You must first liftover or otherwise convert the data to GRCh38.
+
+>[!IMPORTANT]
+Make sure your VCF contigs include the `chr` prefix (e.g., `chr1` instead of `1`): `##contig=<ID=chr1>`.
+
+
+##### Running harmonization
+
+```bash
 python3 ./pipeline.py \
   --input-vcf "/path/to/input.vcf.gz" \
   --workdir "/path/to/workdir" \
@@ -115,43 +156,64 @@ python3 ./pipeline.py \
   --log-level DEBUG
 ```
 
-`--reference-split-template` specifies the path to the reference VCFs (1000 Genomes and/or HGDP) which will be used to phase and inpute your input VCF. The path can be accept any pattern as long as it can iterate through the `{chrom}`s, because the code just does `.format(chrom=chrom)` on the string.
+- **`--bundle-dir`** points to one of the pretrained PCLAI bundles
+- **`--reference-split-template`** points to the reference VCFs (1000 Genomes and/or HGDP) used for BEAGLE imputation. The path can be accept any pattern as long as it can iterate through the `{chrom}`s, because the code just does `.format(chrom=chrom)` on the string.
+- **`--beagle-jar`** must point to a valid BEAGLE JAR
+- **`--reference-fasta`** is used for optional target normalization
+- **`--auto-normalize-on-qc-fail`** retries QC after normalization when needed
 
+>[!IMPORTANT]
+The harmonization pipeline assumes the input VCF is indexed and bgzip-compressed (`.vcf.gz`) or otherwise readable by bcftools. If your input is a plain `.vcf`, compress and index it first.
 
-This produces harmonized chromosome VCFs under:
+For example:
+```bash
+bgzip -c input.vcf > input.vcf.gz
+bcftools index -t input.vcf.gz
 ```
+
+#### Harmonized output format
+
+After harmonization, you should have per-chromosome VCFs under your work directory:
+```bash
 /path/to/workdir/
   chr1/final.for_model.chr1.vcf.gz
   chr2/final.for_model.chr2.vcf.gz
   ...
 ```
+These per-chromosome VCFs are in the exact SNP order expected by the bundle and can be passed directly to the inference runner.
 
-##### TL;DR
+#### TL;DR
 
 If you have an arbitrary input VCF and want to run our pretrained models:
 
-1. Choose a bundle (`pclai_1kg_cpu`, `pclai_1kg_cuda`, `pclai_1kg+hgdp_cpu` or `pclai_1kg+hgdp_cuda`)
-2. Harmonize your input VCF with `pipeline.py`
+1. Choose a bundle
+    - `pclai_1kg_cpu`
+    - `pclai_1kg_cuda`
+    - `pclai_1kg+hgdp_cpu`
+    - `pclai_1kg+hgdp_cuda`
+2. Harmonize your input VCF with `pipeline.py` if needed
 3. Collect the harmonized per-chromosome VCFs into a folder
 4. Run `inference.py` on that folder
 5. Save the outputs for downstream analysis and plotting
+
+#### Running inference
 
 The `inference.py` module provides a command-line interface with two modes:
 
 - `run-chrom`: run one chromosome VCF against the corresponding chromosome bundle
 - `run-dir`: run a directory of chromosome VCFs
 
-Single chromosome:
+##### Single chromosome:
 ```bash
 python3 inference.py run-chrom \
   --bundle-dir /path/to/pclai_bundle_cuda \
-  --vcf-path /path/to/chrXXX.vcf.gz \
-  --chrom XXX \
+  --vcf-path /path/to/chr21.vcf.gz \
+  --chrom 21 \
   --device cuda \
-  --outdir /path/to/output_chrXXX
+  --outdir /path/to/output_chr21
 ```
 
-Whole VCF directory:
+##### Whole VCF directory:
 ```bash
 python3 inference.py run-dir \
   --bundle-dir /path/to/pclai_bundle_cuda \
@@ -159,33 +221,34 @@ python3 inference.py run-dir \
   --device cuda \
   --outdir /path/to/output_all
 ```
-Specific chromosomes:
+
+##### Selected chromosomes only:
 ```bash
 python3 inference.py run-dir \
   --bundle-dir /path/to/pclai_bundle_cuda \
   --vcf-dir /path/to/my_vcfs \
   --device cuda \
-  --chroms XXX1,XXX2 \
-  --outdir /path/to/output_chrXXX1_chrXXX2
+  --chroms 21,22 \
+  --outdir /path/to/output_chr21_chr22
 ```
 
 > [!IMPORTANT]
 Use `--device cpu` with a CPU bundle and `--device cuda` with a CUDA bundle.
 
-##### Output files
+##### Inference output files
 
-Each run writes:
-```
+Each inference run writes:
+```text
 outdir/
   results.pkl.gz
   results_cp.pkl.gz
   stats.tsv
   metadata.json
 ```
-- `results.pkl.gz`: nested dictionary with local ancestry coordinates
-- `results_cp.pkl.gz`: nested dictionary with breakpoint logits
-- `stats.tsv`: tabular summary of SNP matching / coverage for each chromosome or subset
-- `metadata.json`: run configuration and paths
+- **`results.pkl.gz`**: nested dictionary with local ancestry coordinates
+- **`results_cp.pkl.gz`**: nested dictionary with breakpoint logits
+- **`stats.tsv`**: tabular summary of SNP matching / coverage for each chromosome or subset
+- **`metadata.json`**: run configuration and paths
 
 ##### Loading saved outputs
 
