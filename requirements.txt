@@ -1,0 +1,7 @@
+torch==2.4.0
+numpy==2.3.2
+pandas==2.3.1
+snputils==0.2.34
+polars==1.32.0
+tqdm==4.67.1
+PyYAML==6.0.2
