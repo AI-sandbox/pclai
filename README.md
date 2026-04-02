@@ -34,7 +34,7 @@ Using pre-trained PCLAI relies on two main workflows:
 Currently, we provide four pretrained bundles:
 
 - `pclai_1kg_bundle_cpu`: trained on 1000 Genomes for CPU inference ([download](bundles/pclai_1kg_bundle_cpu)).
-- `pclai_1kg_bundle_cuda`: trained on 1000 Genomes for GPU inference ([download](bundles/pclai_1kg_bundle_cuda)).
+- `pclai_1kg_bundle_cuda`: trained on 1000 Genomes for GPU inference ([download](https://drive.google.com/file/d/1VUrPMB8IoE9D6i-NdHx-FTWZH_FlL_zd/view?usp=sharing)).
 - `pclai_1kg+hgdp_bundle_cpu`: trained on 1000 Genomes + Human Genome Diversity Project (HGDP) for CPU inference ([download](bundles/pclai_1kg+hgdp_bundle_cpu)).
 - `pclai_1kg+hgdp_bundle_cuda`: trained on 1000 Genomes + Human Genome Diversity Project (HGDP) for GPU inference ([download](bundles/pclai_1kg+hgdp_bundle_cuda)).
 
