@@ -333,6 +333,9 @@ python3 paintings.py paint-chromosomes \
   --founders-tsv references/references/pca_1kg_reference_panel.tsv \
   --pca-constructor references/pca_1kg_constructor.pkl \
   --sample-id ID2462 \
+  --width-per-chrom 0.9 \
+  --min-figwidth 4 \
+  --max-figwidth 18 \
   --outdir /path/to/output_dir/plots
 ```
 
@@ -343,6 +346,9 @@ python3 paintings.py paint-chromosomes \
   --vcf-dir /path/to/output_dir/ \
   --founders-tsv references/references/pca_1kg_reference_panel.tsv \
   --pca-constructor references/pca_1kg_constructor.pkl \
+  --width-per-chrom 0.9 \
+  --min-figwidth 4 \
+  --max-figwidth 18 \
   --outdir /path/to/output_dir/plots_all
 ```
 
@@ -354,6 +360,9 @@ python3 paintings.py paint-pca \
   --founders-tsv references/references/pca_1kg_reference_panel.tsv \
   --pca-constructor references/pca_1kg_constructor.pkl \
   --sample-id ID2462 \
+  --hist-bins 100 \
+  --kde-sigma 1.5 \
+  --contour-levels 10 \
   --breakpoint-alpha 0.2 \
   --outdir /path/to/output_dir/plots_all
 ```

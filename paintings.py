@@ -605,9 +605,7 @@ def plot_chromosome_painting_full_bp_with_legend(
     fig=None,
     scale_by_pca=True,
     margin=0.1,
-    legend_mb: float = 10.0,
-    cM_per_Mb: float = 1.0,
-    show_scale_bar: bool = True,
+    show_scale_bar: bool = False,   # default OFF now
 ):
     pca_to_rgb = pca_to_rgb_setup(
         founders_tsv, pca_constructor_path, scale_by_pca=scale_by_pca, margin=margin
@@ -640,7 +638,7 @@ def plot_chromosome_painting_full_bp_with_legend(
         if fig is None:
             fig = ax.figure
 
-    extra_x = bar_width * 1.5 if show_scale_bar else 0.0
+    extra_x = 0.0   # removed legend space
     ax.set_xlim(-bar_width, x_max + extra_x)
     ax.set_ylim(-Y_PAD, max_len + Y_PAD)
 
@@ -689,44 +687,11 @@ def plot_chromosome_painting_full_bp_with_legend(
     ax.spines["left"].set_visible(True)
     ax.tick_params(axis="x", length=0)
 
-    if show_scale_bar and (legend_mb is not None) and (legend_mb > 0):
-        legend_bp = legend_mb * 1e6
-        max_bar_bp = 0.30 * max_len
-        if legend_bp > max_bar_bp:
-            scale = max_bar_bp / legend_bp
-            legend_bp *= scale
-            legend_mb *= scale
-
-        if legend_bp > 0:
-            L_cM = legend_mb * cM_per_Mb
-            n_gen = 50.0 / L_cM if L_cM > 0 else np.nan
-
-            x_leg = x_max + 0.6 * bar_width
-            y0 = 0.08 * max_len
-            y1 = y0 + legend_bp
-
-            ax.plot([x_leg, x_leg], [y0, y1], color="black", lw=2.0)
-            ax.plot([x_leg - bar_width * 0.15, x_leg + bar_width * 0.15], [y0, y0], color="black", lw=1.5)
-            ax.plot([x_leg - bar_width * 0.15, x_leg + bar_width * 0.15], [y1, y1], color="black", lw=1.5)
-
-            label_lines = [f"{legend_mb:.1f} Mb"]
-            if L_cM > 0:
-                label_lines.append(f"≈ {L_cM:.1f} cM")
-                label_lines.append(f"≈ {n_gen:.1f} generations")
-            label = "\n".join(label_lines)
-
-            ax.text(
-                x_leg + bar_width * 0.35,
-                0.5 * (y0 + y1),
-                label,
-                va="center",
-                ha="left",
-                fontsize=9,
-            )
-
     if created_fig:
         fig.tight_layout()
+
     return fig, ax
+   
 
 def plot_pca_windows_contour(
     founders_tsv: str,
@@ -895,9 +860,7 @@ def cli_main():
     )
     sub = ap.add_subparsers(dest="command", required=True)
 
-    # --------------------------------------------------------
     # paint-chromosomes
-    # --------------------------------------------------------
     ap_chr = sub.add_parser("paint-chromosomes", help="Generate chromosome painting(s)")
     ap_chr.add_argument("--results-dir", required=True, help="Directory containing results.pkl.gz and results_cp.pkl.gz")
     ap_chr.add_argument("--vcf-dir", required=True, help="Directory containing harmonized per-chromosome VCFs")
@@ -908,13 +871,26 @@ def cli_main():
     ap_chr.add_argument("--window-size-snps", type=int, default=1000)
     ap_chr.add_argument("--dpi", type=int, default=200)
     ap_chr.add_argument("--figwidth", type=float, default=18)
-    ap_chr.add_argument("--figheight", type=float, default=8)
-    ap_chr.add_argument("--legend-mb", type=float, default=10.0)
-    ap_chr.add_argument("--cM-per-Mb", type=float, default=1.0)
+    ap_chr.add_argument(
+        "--width-per-chrom",
+        type=float,
+        default=0.9,
+        help="Figure width contribution per chromosome (auto-scaled by number of chromosomes present)",
+    )
+    ap_chr.add_argument(
+        "--min-figwidth",
+        type=float,
+        default=4.0,
+        help="Minimum figure width for chromosome paintings",
+    )
+    ap_chr.add_argument(
+        "--max-figwidth",
+        type=float,
+        default=18.0,
+        help="Maximum figure width for chromosome paintings",
+    )
 
-    # --------------------------------------------------------
     # paint-pca
-    # --------------------------------------------------------
     ap_pca = sub.add_parser("paint-pca", help="Generate PCA contour plot(s)")
     ap_pca.add_argument("--results-dir", required=True, help="Directory containing results.pkl.gz and results_cp.pkl.gz")
     ap_pca.add_argument("--founders-tsv", required=True)
@@ -926,7 +902,9 @@ def cli_main():
     ap_pca.add_argument("--figheight", type=float, default=6.5)
     ap_pca.add_argument("--breakpoint-alpha", type=float, default=None, help="Keep only windows with breakpoint prob <= this threshold")
     ap_pca.add_argument("--weight-gamma", type=float, default=2.5)
-
+    ap_pca.add_argument("--hist-bins", type=int, default=100)
+    ap_pca.add_argument("--kde-sigma", type=float, default=4.0)
+    ap_pca.add_argument("--contour-levels", type=int, default=10)
     args = ap.parse_args()
 
     results, results_cp, stats_df, metadata = load_inference_outputs(args.results_dir, verbose=True)
@@ -937,12 +915,24 @@ def cli_main():
         sample_ids = get_sample_ids(results, args.sample_id)
 
         print(f"[paint-chromosomes] plotting {len(sample_ids)} sample(s)", flush=True)
-
         for sample_id in sample_ids:
             print(f"[paint-chromosomes] sample={sample_id}", flush=True)
 
             pred_by_chr = ensure_hap_structure(results[sample_id])
             cp_by_chr = ensure_cp_structure(results_cp.get(sample_id, None))
+
+            chrom_keys_present = sorted(
+                [ck for ck in pred_by_chr.keys() if ck in HG38_CHR_SIZES],
+                key=chr_to_int
+            )
+            n_chrom = max(1, len(chrom_keys_present))
+            figwidth = min(args.max_figwidth, max(args.min_figwidth, args.width_per_chrom * n_chrom))
+
+            print(
+                f"[paint-chromosomes] sample={sample_id} has {n_chrom} chromosome(s); "
+                f"using figwidth={figwidth:.2f}",
+                flush=True,
+            )
 
             fig, ax = plot_chromosome_painting_full_bp_with_legend(
                 founders_tsv=args.founders_tsv,
@@ -950,10 +940,9 @@ def cli_main():
                 results_for_one_sample=pred_by_chr,
                 pos_by_chr=pos_by_chr,
                 window_size_snps=args.window_size_snps,
-                figsize=(args.figwidth, args.figheight),
+                figsize=(figwidth, args.figheight),
                 dpi=args.dpi,
-                legend_mb=args.legend_mb,
-                cM_per_Mb=args.cM_per_Mb,
+                show_scale_bar=False,
             )
 
             out_png = os.path.join(args.outdir, f"{sample_id}.chromosome_painting.png")
@@ -983,6 +972,9 @@ def cli_main():
                 results_cp_for_one_sample=cp_by_chr,
                 breakpoint_alpha=args.breakpoint_alpha,
                 weight_gamma=args.weight_gamma,
+                hist_bins=args.hist_bins,
+                kde_sigma=args.kde_sigma,
+                contour_levels=args.contour_levels,
                 figsize=(args.figwidth, args.figheight),
                 dpi=args.dpi,
                 title=f"PCLAI PCA contour: {sample_id}",
