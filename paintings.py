@@ -871,6 +871,7 @@ def cli_main():
     ap_chr.add_argument("--window-size-snps", type=int, default=1000)
     ap_chr.add_argument("--dpi", type=int, default=200)
     ap_chr.add_argument("--figwidth", type=float, default=18)
+    ap_chr.add_argument("--figheight", type=float, default=8.0)
     ap_chr.add_argument(
         "--width-per-chrom",
         type=float,
