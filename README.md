@@ -196,7 +196,7 @@ After harmonization, you should have per-chromosome VCFs under your work directo
 ```
 These per-chromosome VCFs are in the exact SNP order expected by the bundle and can be passed directly to the inference runner.
 
-#### TL;DR
+### TL;DR
 
 If you have an arbitrary input VCF and want to run our pretrained models:
 
@@ -210,7 +210,7 @@ If you have an arbitrary input VCF and want to run our pretrained models:
 4. Run `inference.py` on that folder
 5. Save the outputs for downstream analysis and plotting
 
-#### Running inference
+### Running inference
 
 The `inference.py` module provides a command-line interface with two modes:
 
@@ -249,11 +249,34 @@ python3 inference.py run-dir \
 > [!IMPORTANT]
 Use `--device cpu` with a CPU bundle and `--device cuda` with a CUDA bundle.
 
+For illustration purposed, a successful run ends like this:
+
+```bash
+[done] Summary table:
+   chrom  subset_idx  n_required  n_matched  n_missing  match_fraction
+0      1           1     1000000     807697     192303        0.807697
+1      1           2     1000000     807937     192063        0.807937
+2      1           3       45747      37401       8346        0.817562
+[save] Writing outputs to: /path/to/output_dir
+[save] results    -> /path/to/output_dir/results.pkl.gz
+[save] results_cp -> /path/to/output_dir/results_cp.pkl.gz
+[save] stats      -> /path/to/output_dir/stats.tsv
+[save] metadata   -> /path/to/output_dir/metadata.json
+```
+> [!NOTE]
+`match_fraction` shows the percentage of matching SNPs between your input VCF and the model's. The higher the better. 
+
+> [!CAUTION]
+Any `match_fraction` below ~50% should be treated carefully as most of signal is being captured from inputed positions.
+
+> [!IMPORTANT]
+If your `match_fraction` is way below ~50% using our pre-trained models, we recommend training a PCLAI from scratch using your specific set of sites.
+
 ##### Inference output files
 
 Each inference run writes:
 ```text
-outdir/
+output_dir/
   results.pkl.gz
   results_cp.pkl.gz
   stats.tsv
@@ -299,6 +322,42 @@ Example:
 results_cp["KPP2462"]["chr21"]["h1"]
 ```
 returns a 1D array of logits. 
+
+### Visualizing PCLAI chromosome paintings
+
+#### Chromosome painting for one sample
+```python
+python3 paintings.py paint-chromosomes \
+  --results-dir /path/to/output_dir/ \
+  --vcf-dir /path/to/output_dir/ \
+  --founders-tsv references/references/pca_1kg_reference_panel.tsv \
+  --pca-constructor references/pca_1kg_constructor.pkl \
+  --sample-id ID2462 \
+  --outdir /path/to/output_dir/plots
+```
+
+#### Chromosome painting for all samples
+```python
+python3 paintings.py paint-chromosomes \
+  --results-dir /path/to/output_dir/ \
+  --vcf-dir /path/to/output_dir/ \
+  --founders-tsv references/references/pca_1kg_reference_panel.tsv \
+  --pca-constructor references/pca_1kg_constructor.pkl \
+  --outdir /path/to/output_dir/plots_all
+```
+
+#### PCA contour plot for one sample, filtering out high-breakpoint windows
+
+```python
+python3 paintings.py paint-pca \
+  --results-dir /path/to/output_dir/ \
+  --founders-tsv references/references/pca_1kg_reference_panel.tsv \
+  --pca-constructor references/pca_1kg_constructor.pkl \
+  --sample-id ID2462 \
+  --breakpoint-alpha 0.2 \
+  --outdir /path/to/output_dir/plots_all
+```
+
 
 
 ### Training PCLAI on custom datasets
