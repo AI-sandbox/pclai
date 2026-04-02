@@ -325,7 +325,39 @@ returns a 1D array of logits.
 
 ### Visualizing PCLAI chromosome paintings
 
-#### Chromosome painting for one sample
+The `paintings.py` script generates two complementary visualizations from saved inference outputs:
+
+- **Chromosome paintings**: chromosome paintings of local ancestry coordinates along each chromosome
+- **PCA contour plots**: density contours of all inferred windows in PCA space
+
+These commands operate on the outputs previously written by `inference.py`, so you do **not** need the model bundle again at this stage.
+
+> [!IMPORTANT]
+> Before running `paintings.py`, make sure you already ran inference and saved:
+>
+> - `results.pkl.gz`
+> - `results_cp.pkl.gz`
+> - `stats.tsv`
+> - `metadata.json`
+>
+> inside a single `output_dir`.
+
+> [!NOTE]
+The painting CLI also needs access to the harmonized chromosome VCFs in order to recover genomic positions for plotting along the chromosomes. That is why `--vcf-dir` should point to the directory containing the per-chromosome harmonized VCFs.
+
+#### Chromosome paintings
+
+Chromosome paintings color each genomic window according to its 2D PCLAI coordinate. The color mapping is derived from the PCA reference panel provided by:
+
+- **`--founders-tsv`**
+- **`--pca-constructor`**
+
+> [!IMPORTANT]
+The `--founders-tsv` and `--pca-constructor` used for plotting should match the reference system used to interpret the model outputs. If you switch reference PCA spaces, the color mapping will change.
+
+These plots are useful for seeing how ancestry coordinates vary along the genome and across haplotypes.
+
+##### Chromosome painting for one sample
 ```python
 python3 paintings.py paint-chromosomes \
   --results-dir /path/to/output_dir/ \
@@ -339,7 +371,7 @@ python3 paintings.py paint-chromosomes \
   --outdir /path/to/output_dir/plots
 ```
 
-#### Chromosome painting for all samples
+##### Chromosome painting for all samples
 ```python
 python3 paintings.py paint-chromosomes \
   --results-dir /path/to/output_dir/ \
@@ -351,6 +383,35 @@ python3 paintings.py paint-chromosomes \
   --max-figwidth 18 \
   --outdir /path/to/output_dir/plots_all
 ```
+**Key parameters for chromosome paintings**:
+- **`--sample-id`**: plot a single sample; if omitted, generate plots for all samples in `results.pkl.gz`
+- **`--vcf-dir`**: directory containing harmonized per-chromosome VCFs used to recover SNP positions
+- **`--width-per-chrom`**: horizontal width contribution per chromosome; increase this if multi-chromosome plots feel cramped
+- **`--min-figwidth`**: minimum figure width for cases with very few chromosomes
+- **`--max-figwidth`**: maximum figure width for cases with many chromosomes
+- **`--window-size-snps`**: number of SNPs per model window; this should match the windowing used during inference (our pre-trained models use `1000`)
+- **`--dpi`**: output resolution
+
+> [!TIP]
+If you are plotting only one chromosome, a small `--min-figwidth` such as 4 or 5 usually looks better than a wide default figure.
+
+> [!TIP]
+If labels overlap when plotting many chromosomes, try reducing `--width-per-chrom` slightly or increasing `--max-figwidth`.
+
+The chromosome painting command writes, for each sample:
+```text
+plots/
+  SAMPLEID.chromosome_painting.png
+  SAMPLEID.chromosome_painting.pdf
+```
+
+#### PCA contour plots
+
+PCA contour plots summarize the density of all windows for one sample in PCA space. These plots are useful for:
+
+- Comparing samples visually
+- Assessing how concentrated or diffuse the inferred windows are
+- Filtering windows using breakpoint confidence before plotting
 
 #### PCA contour plot for one sample, filtering out high-breakpoint windows
 
@@ -360,14 +421,45 @@ python3 paintings.py paint-pca \
   --founders-tsv references/references/pca_1kg_reference_panel.tsv \
   --pca-constructor references/pca_1kg_constructor.pkl \
   --sample-id ID2462 \
-  --hist-bins 100 \
+  --hist-bins 64 \
   --kde-sigma 1.5 \
   --contour-levels 10 \
   --breakpoint-alpha 0.2 \
   --outdir /path/to/output_dir/plots_all
 ```
 
+**Key parameters for PCA contour plots**:
+- **`--sample-id`**: plot a single sample; if omitted, generate plots for all samples
+- **`--hist-bins`**: number of 2D histogram bins before smoothing 
+    - **lower values**: smoother, coarser contours 
+    - **higher values**: finer, more detailed contours
+- **`--kde-sigma`**: Gaussian smoothing strength
+    - **lower values**: sharper contours
+    - **higher values**: smoother contours
+- **`--contour-levels`**: number of contour levels to draw
+- **`--breakpoint-alpha`**: keep only windows with breakpoint score/probability less than or equal to this threshold
+- **`--weight-gamma`**: controls how strongly low-breakpoint windows are emphasized when weighting densities
+- **`--dpi`**, **`--figwidth`**, **`--figheight`**: output resolution and figure size
 
+> [!TIP]
+> A good starting point for PCA contour plots is:
+>
+> `--hist-bins 64`
+> `--kde-sigma 1.5`
+> `--contour-levels 10`
+
+> [!TIP]
+If the contours look noisy, increase `--kde-sigma` or reduce `--hist-bins`.
+
+> [!TIP]
+If you want to focus on the most stable windows only, try `--breakpoint-alpha 0.1` or `--breakpoint-alpha 0.2`.
+
+The PCA contour command writes, for each sample:
+```text
+plots_all/
+  SAMPLEID.pca_contour.png
+  SAMPLEID.pca_contour.pdf
+```
 
 ### Training PCLAI on custom datasets
 Soon!

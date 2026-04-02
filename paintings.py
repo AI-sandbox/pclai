@@ -600,7 +600,7 @@ def plot_chromosome_painting_full_bp_with_legend(
     tip_aspect=1.8,
     edge_lw=0.9,
     grey="#616161",
-    window_alpha=0.38,
+    window_alpha=0.75,
     ax=None,
     fig=None,
     scale_by_pca=True,
