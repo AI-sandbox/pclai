@@ -114,6 +114,12 @@ Then you can skip harmonization and run inference directly.
 
 Otherwise, run `pipeline.py` first.
 
+> [!WARNING]
+It is very likely you will need to run harmonization. **Do not run inference without harmonizing your VCF first**. 
+
+> [!CAUTION]
+Running inference without harmonization will lead to incorrect outputs.
+
 #### Harmonization workflow
 
 The harmonization pipeline does the following for each chromosome:
@@ -144,7 +150,7 @@ All pretrained bundles assume GRCh38 coordinates.
 If your input VCF is not in GRCh38, harmonization will not be sufficient by itself.
 You must first liftover or otherwise convert the data to GRCh38.
 
->[!IMPORTANT]
+>[!NOTE]
 Make sure your VCF contigs include the `chr` prefix (e.g., `chr1` instead of `1`): `##contig=<ID=chr1>`.
 
 
